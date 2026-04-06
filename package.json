@@ -1,0 +1,15 @@
+{
+  "name": "agitated-bohr",
+  "version": "1.0.0",
+  "description": "Github Local Folder",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "docx": "^9.6.1"
+  }
+}
