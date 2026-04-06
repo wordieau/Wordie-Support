@@ -1128,7 +1128,7 @@ const doc = new Document({
 
 // ─── Output ───────────────────────────────────────────────────────────────────
 Packer.toBuffer(doc).then(buffer => {
-  fs.writeFileSync('/Users/stewartlemalu/Documents/GitHub/.claude/worktrees/agitated-bohr/Wordie-Resource-Planner-PRD.docx', buffer);
+  fs.writeFileSync('Wordie-Resource-Planner-PRD.docx', buffer);
   console.log('Document written successfully.');
 }).catch(err => {
   console.error('Error:', err);
