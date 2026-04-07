@@ -456,8 +456,78 @@ function closePanel() {
   document.getElementById('detailPanel').classList.add('hidden');
 }
 
+// ── API integration ───────────────────────────────────────────────────────────
+// When served from the Node.js backend, fetch real data. Fall back to demo data.
+async function loadLiveData(from, to) {
+  try {
+    const [capRes, allocRes] = await Promise.all([
+      fetch(`/api/capacity?from=${from}&to=${to}`),
+      fetch(`/api/allocations?from=${from}&to=${to}`),
+    ]);
+    if (!capRes.ok || !allocRes.ok) return false;
+
+    const capacity   = await capRes.json();
+    const allocs     = await allocRes.json();
+
+    // Rebuild PEOPLE and TICKETS from live data
+    PEOPLE.length = 0;
+    TICKETS.length = 0;
+
+    const COLOURS = ['#1B4FD8','#7C3AED','#0891B2','#D97706','#16A34A','#DC2626'];
+    capacity.forEach((u, i) => {
+      PEOPLE.push({
+        id: u.user_id, name: u.name,
+        initials: u.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase(),
+        color: COLOURS[i % COLOURS.length],
+      });
+    });
+
+    // Group allocations into ticket-level blocks per person per contiguous range
+    const ticketMap = {};
+    allocs.forEach(a => {
+      const key = `${a.ticket_id}__${a.user_id}`;
+      if (!ticketMap[key]) {
+        ticketMap[key] = {
+          id: a.ticket_id, title: a.title, person: a.user_id,
+          type: a.allocation_type?.toLowerCase() || 'hard',
+          soft: a.allocation_type === 'SOFT',
+          hours: a.planned_hours, actual: parseFloat(a.actual_hours) || 0,
+          project: a.ticket_id, color: COLOURS[Object.keys(ticketMap).length % COLOURS.length],
+          dates: [],
+        };
+      }
+      ticketMap[key].dates.push(a.date);
+    });
+
+    const days = getWeekDays(weekOffset);
+    const mondayStr = days[0].toISOString().slice(0,10);
+
+    Object.values(ticketMap).forEach(t => {
+      if (!t.dates.length) return;
+      t.dates.sort();
+      const startDate = new Date(t.dates[0]);
+      const startDiff = Math.round((startDate - days[0]) / 86400000);
+      t.start = Math.max(0, startDiff);
+      t.span  = t.dates.length;
+      TICKETS.push(t);
+    });
+
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 // ── Init ─────────────────────────────────────────────────────────────────────
-render();
+async function init() {
+  const days = getWeekDays(weekOffset);
+  const from = days[0].toISOString().slice(0,10);
+  const to   = days[6].toISOString().slice(0,10);
+  await loadLiveData(from, to); // silently falls back to demo data if API unavailable
+  render();
+}
+
+init();
 </script>
 </body>
 </html>
