@@ -1,15 +1,24 @@
 {
-  "name": "agitated-bohr",
+  "name": "wordie-resource-planner",
   "version": "1.0.0",
-  "description": "Github Local Folder",
-  "main": "index.js",
+  "description": "Wordie Resource Planner — HubSpot + Everhour scheduling tool",
+  "main": "server/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "generate-doc": "node generate-doc.js",
+    "db:migrate": "node server/db/migrate.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
-    "docx": "^9.6.1"
+    "axios": "^1.7.2",
+    "cors": "^2.8.5",
+    "docx": "^9.6.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "node-cron": "^3.0.3",
+    "pg": "^8.12.0"
   }
 }

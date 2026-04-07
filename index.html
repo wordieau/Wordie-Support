@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wordie Resource Planner</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blue: #1B4FD8; --blue-light: #EFF4FF; --blue-mid: #DBEAFE;
+    --green: #16A34A; --green-light: #DCFCE7;
+    --amber: #D97706; --amber-light: #FEF9C3;
+    --red: #DC2626; --red-light: #FEE2E2; --red-dark: #7F1D1D;
+    --dark: #1E293B; --mid: #64748B; --light: #F1F5F9;
+    --border: #CBD5E1; --white: #fff;
+    --sidebar-w: 220px; --row-h: 64px; --col-w: 80px; --header-h: 56px;
+  }
+  body { font-family: Arial, sans-serif; font-size: 13px; color: var(--dark); background: var(--light); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+  /* ── Top nav ── */
+  .topnav { height: var(--header-h); background: var(--white); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 16px; gap: 12px; flex-shrink: 0; z-index: 20; }
+  .topnav .logo { font-weight: 800; font-size: 15px; color: var(--blue); letter-spacing: -.3px; margin-right: 8px; }
+  .topnav .views { display: flex; gap: 2px; }
+  .topnav .views button { padding: 5px 12px; border-radius: 6px; border: none; background: none; cursor: pointer; font-size: 12px; color: var(--mid); font-family: Arial, sans-serif; }
+  .topnav .views button.active { background: var(--blue-light); color: var(--blue); font-weight: 700; }
+  .topnav .spacer { flex: 1; }
+  .nav-date { font-size: 13px; font-weight: 700; color: var(--dark); }
+  .nav-btn { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--white); cursor: pointer; font-size: 12px; color: var(--mid); font-family: Arial, sans-serif; }
+  .nav-btn:hover { background: var(--light); }
+  .nav-btn.primary { background: var(--blue); color: var(--white); border-color: var(--blue); }
+  .tag { padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+  .tag.soft { background: var(--amber-light); color: var(--amber); }
+  .tag.hard { background: var(--green-light); color: var(--green); }
+
+  /* ── Main layout ── */
+  .main { display: flex; flex: 1; overflow: hidden; }
+
+  /* ── Sidebar ── */
+  .sidebar { width: var(--sidebar-w); background: var(--white); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; overflow-y: auto; }
+  .sidebar-section { padding: 12px 12px 4px; font-size: 10px; font-weight: 700; color: var(--mid); text-transform: uppercase; letter-spacing: .6px; }
+  .sidebar-item { display: flex; align-items: center; gap: 8px; padding: 7px 12px; cursor: pointer; border-radius: 6px; margin: 1px 6px; }
+  .sidebar-item:hover { background: var(--light); }
+  .sidebar-item.active { background: var(--blue-light); }
+  .sidebar-item svg { width: 15px; height: 15px; color: var(--mid); flex-shrink: 0; }
+  .sidebar-item.active svg { color: var(--blue); }
+  .sidebar-item span { font-size: 12px; color: var(--dark); }
+  .sidebar-item.active span { color: var(--blue); font-weight: 700; }
+  .sidebar-divider { height: 1px; background: var(--border); margin: 8px 12px; }
+  .filter-label { padding: 6px 12px 2px; font-size: 11px; color: var(--mid); font-weight: 600; }
+  .filter-chip { display: inline-flex; align-items: center; gap: 4px; margin: 3px 6px; padding: 4px 8px; border-radius: 20px; border: 1px solid var(--border); font-size: 11px; cursor: pointer; background: var(--white); }
+  .filter-chip.on { background: var(--blue); color: var(--white); border-color: var(--blue); }
+  .ai-tray { margin: 12px; padding: 10px; background: linear-gradient(135deg, #EFF4FF, #DBEAFE); border-radius: 8px; border: 1px solid #BFDBFE; }
+  .ai-tray-title { font-size: 11px; font-weight: 700; color: var(--blue); margin-bottom: 4px; }
+  .ai-tray-item { font-size: 11px; color: var(--dark); padding: 4px 0; border-bottom: 1px solid #BFDBFE; line-height: 1.4; }
+  .ai-tray-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .ai-badge { display: inline-block; background: var(--red); color: white; border-radius: 10px; padding: 1px 5px; font-size: 10px; font-weight: 700; margin-right: 4px; }
+
+  /* ── Calendar area ── */
+  .calendar-wrap { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .cal-header { display: flex; background: var(--white); border-bottom: 1px solid var(--border); flex-shrink: 0; position: sticky; top: 0; z-index: 10; }
+  .cal-header .name-col { width: var(--sidebar-w); min-width: var(--sidebar-w); padding: 10px 14px; font-size: 11px; font-weight: 700; color: var(--mid); display: flex; align-items: center; border-right: 1px solid var(--border); }
+  .cal-header .days { display: flex; flex: 1; }
+  .day-head { width: var(--col-w); min-width: var(--col-w); text-align: center; padding: 6px 0; border-right: 1px solid var(--border); }
+  .day-head .dow { font-size: 10px; color: var(--mid); text-transform: uppercase; letter-spacing: .4px; }
+  .day-head .date { font-size: 14px; font-weight: 700; color: var(--dark); }
+  .day-head.today .date { background: var(--blue); color: var(--white); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
+  .day-head.weekend { background: var(--light); }
+
+  /* ── Rows ── */
+  .rows-scroll { flex: 1; overflow-y: auto; }
+  .person-row { display: flex; border-bottom: 1px solid var(--border); min-height: var(--row-h); }
+  .person-row:hover { background: #FAFBFF; }
+  .person-info { width: var(--sidebar-w); min-width: var(--sidebar-w); border-right: 1px solid var(--border); padding: 8px 12px; display: flex; flex-direction: column; justify-content: center; gap: 5px; }
+  .person-name { font-size: 12px; font-weight: 700; color: var(--dark); display: flex; align-items: center; gap: 6px; }
+  .avatar { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: white; flex-shrink: 0; }
+  .util-bar-wrap { display: flex; align-items: center; gap: 5px; }
+  .util-bar { flex: 1; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .util-bar-fill { height: 100%; border-radius: 3px; transition: width .3s; }
+  .util-pct { font-size: 10px; font-weight: 700; min-width: 30px; text-align: right; }
+  .util-green { background: var(--green); }
+  .util-amber { background: var(--amber); }
+  .util-red { background: var(--red); }
+
+  .day-cells { display: flex; flex: 1; }
+  .day-cell { width: var(--col-w); min-width: var(--col-w); border-right: 1px solid var(--border); padding: 6px 4px; display: flex; flex-direction: column; gap: 3px; position: relative; }
+  .day-cell.weekend { background: var(--light); }
+  .day-cell.today { background: #F5F8FF; }
+
+  /* ── Blocks ── */
+  .block { border-radius: 5px; padding: 4px 6px; font-size: 10px; cursor: pointer; border-left: 3px solid transparent; position: relative; transition: transform .1s, box-shadow .1s; }
+  .block:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,.12); }
+  .block .b-title { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 62px; }
+  .block .b-hours { color: inherit; opacity: .75; font-size: 9px; }
+  .block .b-progress { height: 3px; border-radius: 2px; background: rgba(255,255,255,.4); margin-top: 3px; overflow: hidden; }
+  .block .b-progress-fill { height: 100%; border-radius: 2px; background: rgba(255,255,255,.8); }
+  .block.green { background: #DCFCE7; color: #14532D; border-left-color: #16A34A; }
+  .block.amber { background: #FEF9C3; color: #713F12; border-left-color: #D97706; }
+  .block.red   { background: #FEE2E2; color: #7F1D1D; border-left-color: #DC2626; }
+  .block.soft  { opacity: .7; border-style: dashed; }
+  .block.overbook { outline: 2px solid var(--red); }
+
+  .overbook-banner { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 4px; padding: 3px 6px; font-size: 10px; color: var(--red); font-weight: 600; margin-bottom: 2px; }
+
+  /* ── Unscheduled drawer ── */
+  .drawer { background: var(--white); border-top: 2px solid var(--blue); padding: 8px 16px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; overflow-x: auto; }
+  .drawer-label { font-size: 11px; font-weight: 700; color: var(--blue); white-space: nowrap; }
+  .queue-block { background: var(--blue-light); border: 1px dashed var(--blue); border-radius: 6px; padding: 5px 10px; font-size: 11px; color: var(--blue); white-space: nowrap; cursor: grab; display: flex; align-items: center; gap: 6px; }
+  .queue-block:hover { background: var(--blue-mid); }
+
+  /* ── Detail panel ── */
+  .detail-panel { width: 360px; background: var(--white); border-left: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; overflow-y: auto; transition: width .2s; }
+  .detail-panel.hidden { width: 0; overflow: hidden; }
+  .dp-header { padding: 14px 16px 10px; border-bottom: 1px solid var(--border); }
+  .dp-title { font-size: 14px; font-weight: 800; color: var(--dark); margin-bottom: 4px; }
+  .dp-meta { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--mid); }
+  .dp-close { float: right; background: none; border: none; cursor: pointer; font-size: 18px; color: var(--mid); line-height: 1; }
+  .dp-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); border-bottom: 1px solid var(--border); }
+  .dp-stat { background: var(--white); padding: 10px 14px; }
+  .dp-stat-label { font-size: 10px; color: var(--mid); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 2px; }
+  .dp-stat-val { font-size: 18px; font-weight: 800; color: var(--dark); }
+  .dp-stat-val.over { color: var(--red); }
+  .dp-section { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .dp-section-title { font-size: 11px; font-weight: 700; color: var(--mid); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 8px; }
+  .variance-bar-wrap { height: 10px; background: var(--border); border-radius: 5px; overflow: hidden; margin-bottom: 4px; position: relative; }
+  .variance-bar-planned { height: 100%; background: var(--blue); border-radius: 5px; }
+  .variance-bar-actual { height: 100%; background: var(--amber); border-radius: 5px; position: absolute; top: 0; left: 0; opacity: .7; }
+  .variance-note { font-size: 11px; color: var(--amber); font-weight: 600; }
+  .dp-day-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .dp-day-table th { text-align: left; font-size: 10px; color: var(--mid); font-weight: 600; padding: 3px 0; border-bottom: 1px solid var(--border); }
+  .dp-day-table td { padding: 4px 0; border-bottom: 1px solid var(--light); color: var(--dark); }
+  .dp-day-table td.over { color: var(--red); font-weight: 700; }
+  .dp-actions { padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; }
+  .dp-btn { padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--white); cursor: pointer; font-size: 12px; font-family: Arial, sans-serif; color: var(--dark); text-align: left; display: flex; align-items: center; gap: 8px; }
+  .dp-btn:hover { background: var(--light); }
+  .dp-btn.primary { background: var(--blue); color: var(--white); border-color: var(--blue); }
+  .ai-card { margin: 12px 16px; padding: 10px 12px; background: linear-gradient(135deg, #EFF4FF, #DBEAFE); border-radius: 8px; border: 1px solid #BFDBFE; font-size: 11px; color: var(--dark); line-height: 1.5; }
+  .ai-card-title { font-weight: 700; color: var(--blue); margin-bottom: 4px; font-size: 12px; }
+  .ai-accept { margin-top: 8px; padding: 5px 10px; background: var(--blue); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 11px; font-family: Arial, sans-serif; }
+</style>
+</head>
+<body>
+
+<!-- Top nav -->
+<nav class="topnav">
+  <span class="logo">Wordie</span>
+  <div class="views">
+    <button class="active">People</button>
+    <button>Timeline</button>
+    <button>Week</button>
+  </div>
+  <div class="spacer"></div>
+  <button class="nav-btn" onclick="shiftWeek(-1)">&#8592;</button>
+  <span class="nav-date" id="weekLabel"></span>
+  <button class="nav-btn" onclick="shiftWeek(1)">&#8594;</button>
+  <button class="nav-btn" onclick="shiftWeek(0)" style="margin-left:4px">Today</button>
+  <button class="nav-btn primary" style="margin-left:8px">+ Add ticket</button>
+</nav>
+
+<div class="main">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-section">Navigation</div>
+    <div class="sidebar-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>Resource Planner</span>
+    </div>
+    <div class="sidebar-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>Team</span>
+    </div>
+    <div class="sidebar-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span>Reports</span>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section">Filters</div>
+    <div class="filter-label">Allocation type</div>
+    <div style="padding:4px 6px 8px">
+      <span class="filter-chip on">Hard</span>
+      <span class="filter-chip on">Soft</span>
+    </div>
+    <div class="filter-label">Team</div>
+    <div style="padding:4px 6px 8px">
+      <span class="filter-chip on">All</span>
+      <span class="filter-chip">Dev</span>
+      <span class="filter-chip">Design</span>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="ai-tray">
+      <div class="ai-tray-title">&#x2728; AI Insights</div>
+      <div class="ai-tray-item"><span class="ai-badge">!</span>Alex overbooked Mon–Wed (+6h)</div>
+      <div class="ai-tray-item"><span class="ai-badge">&#9888;</span>Portal Redesign at risk of delay</div>
+    </div>
+  </aside>
+
+  <!-- Calendar -->
+  <div class="calendar-wrap">
+    <div class="cal-header">
+      <div class="name-col">Team member</div>
+      <div class="days" id="dayHeaders"></div>
+    </div>
+    <div class="rows-scroll" id="rowsScroll"></div>
+    <!-- Unscheduled drawer -->
+    <div class="drawer">
+      <span class="drawer-label">&#9776; Unscheduled (3)</span>
+      <div class="queue-block">&#x2630; WooCommerce Integration · 8h · Due 18 Apr</div>
+      <div class="queue-block">&#x2630; Newsletter Template · 4h · Due 22 Apr</div>
+      <div class="queue-block">&#x2630; SEO Audit · 6h · Unassigned</div>
+    </div>
+  </div>
+
+  <!-- Detail panel -->
+  <aside class="detail-panel hidden" id="detailPanel">
+    <div class="dp-header">
+      <button class="dp-close" onclick="closePanel()">&#x2715;</button>
+      <div class="dp-title" id="dpTitle"></div>
+      <div class="dp-meta" id="dpMeta"></div>
+    </div>
+    <div class="dp-stats" id="dpStats"></div>
+    <div class="ai-card" id="dpAI" style="display:none">
+      <div class="ai-card-title">&#x2728; AI Insight</div>
+      <div id="dpAIText"></div>
+      <button class="ai-accept">Accept suggestion</button>
+    </div>
+    <div class="dp-section">
+      <div class="dp-section-title">Planned vs Actual</div>
+      <div class="variance-bar-wrap">
+        <div class="variance-bar-planned" id="dpBarPlanned"></div>
+        <div class="variance-bar-actual" id="dpBarActual"></div>
+      </div>
+      <div class="variance-note" id="dpVarianceNote"></div>
+    </div>
+    <div class="dp-section">
+      <div class="dp-section-title">Day-by-day</div>
+      <table class="dp-day-table">
+        <thead><tr><th>Date</th><th>Planned</th><th>Logged</th></tr></thead>
+        <tbody id="dpDayTable"></tbody>
+      </table>
+    </div>
+    <div class="dp-actions">
+      <button class="dp-btn primary">&#x1F517; Open in HubSpot</button>
+      <button class="dp-btn">&#x23F1; Log time in Everhour</button>
+      <button class="dp-btn">&#x21C4; Reassign</button>
+    </div>
+  </aside>
+</div>
+
+<script>
+// ── Data ────────────────────────────────────────────────────────────────────
+
+const PEOPLE = [
+  { id:1, name:"Alex Chen",    initials:"AC", color:"#1B4FD8" },
+  { id:2, name:"Jordan Blake", initials:"JB", color:"#7C3AED" },
+  { id:3, name:"Sam Rivera",   initials:"SR", color:"#0891B2" },
+  { id:4, name:"Morgan Lee",   initials:"ML", color:"#D97706" },
+];
+
+// Each ticket: { id, title, person, start (day offset from Mon), span, hours, actual, type, project, soft }
+const TICKETS = [
+  { id:1,  title:"Portal Redesign",      person:1, start:0, span:4, hours:3,   actual:2.5, type:"hard", project:"ClientPortal",  color:"#1B4FD8" },
+  { id:2,  title:"WP Migration",         person:1, start:2, span:2, hours:2,   actual:0.5, type:"hard", project:"Migration",     color:"#7C3AED", ai:"Alex is overbooked by 6h Mon\u2013Wed. Consider moving this to Jordan (22h free this week). Forecast: Alex 100%, Jordan 78%." },
+  { id:3,  title:"Admin / Sprint",       person:1, start:0, span:1, hours:2,   actual:2,   type:"hard", project:"Internal",      color:"#64748B" },
+  { id:4,  title:"WooCommerce Build",    person:2, start:0, span:3, hours:2.5, actual:1,   type:"hard", project:"WooCommerce",   color:"#16A34A" },
+  { id:5,  title:"SEO Proposal",         person:2, start:3, span:2, hours:1.5, actual:0,   type:"soft", project:"SEOProposal",   color:"#D97706" },
+  { id:6,  title:"Design System",        person:3, start:0, span:5, hours:2,   actual:1.5, type:"hard", project:"DesignSystem",  color:"#0891B2" },
+  { id:7,  title:"Logo Refresh",         person:3, start:1, span:2, hours:1.5, actual:0.5, type:"hard", project:"BrandRefresh",  color:"#DC2626" },
+  { id:8,  title:"Proposal – AcmeCo",    person:4, start:0, span:2, hours:2,   actual:0,   type:"soft", project:"AcmeCo",        color:"#7C3AED" },
+  { id:9,  title:"Newsletter",           person:4, start:2, span:3, hours:2,   actual:1,   type:"hard", project:"Newsletter",    color:"#0891B2" },
+];
+
+const CAPACITY = 8; // hours/day
+
+// ── Calendar state ──────────────────────────────────────────────────────────
+let weekOffset = 0;
+
+function getMondayOf(offset) {
+  const d = new Date();
+  const day = d.getDay(); // 0=Sun
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff + offset * 7);
+  d.setHours(0,0,0,0);
+  return d;
+}
+
+function getWeekDays(offset) {
+  const mon = getMondayOf(offset);
+  return Array.from({length:7}, (_,i) => {
+    const d = new Date(mon);
+    d.setDate(d.getDate() + i);
+    return d;
+  });
+}
+
+function fmtDate(d) {
+  return d.toLocaleDateString('en-AU', { day:'numeric', month:'short' });
+}
+
+function shiftWeek(dir) {
+  if (dir === 0) weekOffset = 0;
+  else weekOffset += dir;
+  render();
+}
+
+// ── Render ──────────────────────────────────────────────────────────────────
+function render() {
+  const days = getWeekDays(weekOffset);
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  // Week label
+  document.getElementById('weekLabel').textContent =
+    `${fmtDate(days[0])} – ${fmtDate(days[6])}`;
+
+  // Day headers
+  const DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const headEl = document.getElementById('dayHeaders');
+  headEl.innerHTML = days.map((d,i) => {
+    const isToday = d.getTime() === today.getTime();
+    const isWE = i >= 5;
+    return `<div class="day-head${isToday?' today':''}${isWE?' weekend':''}">
+      <div class="dow">${DOW[i]}</div>
+      <div class="date">${d.getDate()}</div>
+    </div>`;
+  }).join('');
+
+  // Rows
+  const rowsEl = document.getElementById('rowsScroll');
+  rowsEl.innerHTML = '';
+
+  PEOPLE.forEach(person => {
+    const row = document.createElement('div');
+    row.className = 'person-row';
+
+    // Compute utilisation for the week (Mon–Fri only)
+    const personTickets = TICKETS.filter(t => t.person === person.id);
+    let totalAllocated = 0;
+    personTickets.forEach(t => {
+      const workDays = Math.min(t.span, 5);
+      totalAllocated += t.hours * workDays;
+    });
+    const weekCapacity = CAPACITY * 5;
+    const utilPct = Math.round((totalAllocated / weekCapacity) * 100);
+    const utilClass = utilPct >= 101 ? 'red' : utilPct >= 80 ? 'amber' : 'green';
+    const utilColor = utilPct >= 101 ? 'var(--red)' : utilPct >= 80 ? 'var(--amber)' : 'var(--green)';
+
+    // Person info
+    row.innerHTML = `
+      <div class="person-info">
+        <div class="person-name">
+          <div class="avatar" style="background:${person.color}">${person.initials}</div>
+          ${person.name}
+        </div>
+        <div class="util-bar-wrap">
+          <div class="util-bar"><div class="util-bar-fill util-${utilClass}" style="width:${Math.min(utilPct,100)}%"></div></div>
+          <span class="util-pct" style="color:${utilColor}">${utilPct}%</span>
+        </div>
+      </div>`;
+
+    // Day cells
+    const cells = document.createElement('div');
+    cells.className = 'day-cells';
+
+    days.forEach((d, i) => {
+      const isToday = d.getTime() === today.getTime();
+      const isWE = i >= 5;
+      const cell = document.createElement('div');
+      cell.className = 'day-cell' + (isWE?' weekend':'') + (isToday?' today':'');
+
+      // Daily capacity check
+      let dayTotal = 0;
+      const dayTickets = personTickets.filter(t => i >= t.start && i < t.start + t.span && i < 5);
+      dayTickets.forEach(t => dayTotal += t.hours);
+      const overbooked = dayTotal > CAPACITY;
+
+      if (overbooked) {
+        cell.innerHTML = `<div class="overbook-banner">+${(dayTotal-CAPACITY).toFixed(1)}h over</div>`;
+      }
+
+      dayTickets.forEach(t => {
+        const progressPct = Math.min(Math.round((t.actual / (t.hours * t.span)) * 100), 100);
+        const blockClass = overbooked ? 'red overbook' : (t.hours >= 3 ? 'amber' : 'green');
+        const block = document.createElement('div');
+        block.className = `block ${blockClass}${t.soft?' soft':''}`;
+        block.innerHTML = `
+          <div class="b-title">${t.title}</div>
+          <div class="b-hours">${t.hours}h${t.soft?' · SOFT':''}</div>
+          <div class="b-progress"><div class="b-progress-fill" style="width:${progressPct}%"></div></div>`;
+        block.onclick = () => openPanel(t, person, days);
+        cell.appendChild(block);
+      });
+
+      cells.appendChild(cell);
+    });
+
+    row.appendChild(cells);
+    rowsEl.appendChild(row);
+  });
+}
+
+// ── Detail panel ─────────────────────────────────────────────────────────────
+function openPanel(ticket, person, days) {
+  const panel = document.getElementById('detailPanel');
+  panel.classList.remove('hidden');
+
+  document.getElementById('dpTitle').textContent = ticket.title;
+  document.getElementById('dpMeta').innerHTML = `
+    <div class="avatar" style="background:${person.color};width:18px;height:18px;font-size:9px">${person.initials}</div>
+    ${person.name} &nbsp;·&nbsp;
+    <span class="tag ${ticket.soft?'soft':'hard'}">${ticket.soft?'SOFT':'HARD'}</span>`;
+
+  const totalActual = ticket.actual;
+  const totalPlanned = ticket.hours * ticket.span;
+  const remaining = Math.max(totalPlanned - totalActual, 0);
+  const forecast = totalActual + remaining;
+  const variance = forecast - totalPlanned;
+
+  document.getElementById('dpStats').innerHTML = `
+    <div class="dp-stat"><div class="dp-stat-label">Planned</div><div class="dp-stat-val">${totalPlanned}h</div></div>
+    <div class="dp-stat"><div class="dp-stat-label">Logged</div><div class="dp-stat-val">${totalActual}h</div></div>
+    <div class="dp-stat"><div class="dp-stat-label">Remaining</div><div class="dp-stat-val">${remaining}h</div></div>
+    <div class="dp-stat"><div class="dp-stat-label">Forecast</div><div class="dp-stat-val${variance>0?' over':''}">${forecast}h</div></div>`;
+
+  // AI card
+  const aiCard = document.getElementById('dpAI');
+  if (ticket.ai) {
+    aiCard.style.display = 'block';
+    document.getElementById('dpAIText').textContent = ticket.ai;
+  } else {
+    aiCard.style.display = 'none';
+  }
+
+  // Variance bar
+  const pct = Math.min(Math.round((totalActual / totalPlanned) * 100), 100);
+  document.getElementById('dpBarPlanned').style.width = '100%';
+  document.getElementById('dpBarActual').style.width = pct + '%';
+  document.getElementById('dpVarianceNote').textContent =
+    variance > 0 ? `+${variance.toFixed(1)}h over estimate — at risk` :
+    variance < 0 ? `${Math.abs(variance).toFixed(1)}h under estimate` : 'On track';
+  document.getElementById('dpVarianceNote').style.color =
+    variance > 0 ? 'var(--red)' : variance < 0 ? 'var(--amber)' : 'var(--green)';
+
+  // Day table
+  const tbody = document.getElementById('dpDayTable');
+  const DOW = ['Mon','Tue','Wed','Thu','Fri'];
+  tbody.innerHTML = '';
+  for (let i = ticket.start; i < ticket.start + ticket.span && i < 5; i++) {
+    const d = days[i];
+    const actualDay = (ticket.actual / ticket.span).toFixed(1);
+    const over = parseFloat(actualDay) > ticket.hours;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${DOW[i]} ${d.getDate()}</td><td>${ticket.hours}h</td><td class="${over?'over':''}">${actualDay}h</td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+function closePanel() {
+  document.getElementById('detailPanel').classList.add('hidden');
+}
+
+// ── API integration ───────────────────────────────────────────────────────────
+// When served from the Node.js backend, fetch real data. Fall back to demo data.
+async function loadLiveData(from, to) {
+  try {
+    const [capRes, allocRes] = await Promise.all([
+      fetch(`/api/capacity?from=${from}&to=${to}`),
+      fetch(`/api/allocations?from=${from}&to=${to}`),
+    ]);
+    if (!capRes.ok || !allocRes.ok) return false;
+
+    const capacity   = await capRes.json();
+    const allocs     = await allocRes.json();
+
+    // Rebuild PEOPLE and TICKETS from live data
+    PEOPLE.length = 0;
+    TICKETS.length = 0;
+
+    const COLOURS = ['#1B4FD8','#7C3AED','#0891B2','#D97706','#16A34A','#DC2626'];
+    capacity.forEach((u, i) => {
+      PEOPLE.push({
+        id: u.user_id, name: u.name,
+        initials: u.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase(),
+        color: COLOURS[i % COLOURS.length],
+      });
+    });
+
+    // Group allocations into ticket-level blocks per person per contiguous range
+    const ticketMap = {};
+    allocs.forEach(a => {
+      const key = `${a.ticket_id}__${a.user_id}`;
+      if (!ticketMap[key]) {
+        ticketMap[key] = {
+          id: a.ticket_id, title: a.title, person: a.user_id,
+          type: a.allocation_type?.toLowerCase() || 'hard',
+          soft: a.allocation_type === 'SOFT',
+          hours: a.planned_hours, actual: parseFloat(a.actual_hours) || 0,
+          project: a.ticket_id, color: COLOURS[Object.keys(ticketMap).length % COLOURS.length],
+          dates: [],
+        };
+      }
+      ticketMap[key].dates.push(a.date);
+    });
+
+    const days = getWeekDays(weekOffset);
+    const mondayStr = days[0].toISOString().slice(0,10);
+
+    Object.values(ticketMap).forEach(t => {
+      if (!t.dates.length) return;
+      t.dates.sort();
+      const startDate = new Date(t.dates[0]);
+      const startDiff = Math.round((startDate - days[0]) / 86400000);
+      t.start = Math.max(0, startDiff);
+      t.span  = t.dates.length;
+      TICKETS.push(t);
+    });
+
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+async function init() {
+  const days = getWeekDays(weekOffset);
+  const from = days[0].toISOString().slice(0,10);
+  const to   = days[6].toISOString().slice(0,10);
+  await loadLiveData(from, to); // silently falls back to demo data if API unavailable
+  render();
+}
+
+init();
+</script>
+</body>
+</html>
